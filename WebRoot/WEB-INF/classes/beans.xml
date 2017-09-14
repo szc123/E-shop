@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop" 
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop-4.2.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd">
+        <!-- 使用txManager必须加上xmlns:tx以及关于tx的schema -->
+        <!-- <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        	<property name="locations">
+        		<array>
+        			<value>classpath:jdbc.properties</value>     		
+        		</array>
+        	</property> 
+        </bean> -->
+        <context:property-placeholder location="classpath:jdbc.properties"/>
+		<!-- 配置c3p0连接池 -->
+		<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+			<property name="driverClass" value="${driverClass}"/>
+			<property name="jdbcUrl" value="${jdbcUrl}"/>
+			<property name="user" value="${user}"/>
+			<property name="password" value="${password}"/>
+		</bean>
+		
+		<!-- 第二种方式是使用注解的方式注入，主要用在java代码中使用注解注入properties文件中相应的value值 -->  
+		<bean id="prop" class="org.springframework.beans.factory.config.PropertiesFactoryBean">  
+    		<property name="locations"><!-- 这里是PropertiesFactoryBean类，它也有个locations属性，也是接收一个数组，跟上面一样  -->
+        		<array>  
+            		<value>classpath:public.properties</value>  
+            		<value>classpath:pay.properties</value>  
+        		</array>  
+    		</property>  
+		</bean>  
+		
+		<!-- 配置sessionFactory -->
+		<bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+			<property name="dataSource" ref="dataSource"/>
+			<property name="configLocation" value="classpath:hibernate.cfg.xml"/>
+		</bean>
+		<!-- 配置事务管理器 -->
+		<bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+			<property name="sessionFactory" ref="sessionFactory"/>
+		</bean>
+		<!-- 配置通知advice -->
+		<tx:advice id="advice" transaction-manager="transactionManager">
+			<tx:attributes>
+				<tx:method name="save*" propagation="REQUIRED"/>
+				<tx:method name="update*" propagation="REQUIRED"/>
+				<tx:method name="delete*" propagation="REQUIRED"/>
+				<tx:method name="*" propagation="SUPPORTS"/>
+			</tx:attributes>
+		</tx:advice>
+		<!-- 配置aop切面 -->
+		<aop:config>
+			<!-- 配置那些包的类要切入事物 -->
+			<aop:pointcut expression="execution(* com.shop.service.impl.*.*(..))" id="pointcut"/>
+			<aop:advisor advice-ref="advice" pointcut-ref="pointcut"/>
+		</aop:config>
+		<!-- 配置action层 
+		<bean id="baseAction" class="com.shop.action.BaseAction" scope="prototype">
+			<property name="categoryService" ref="categoryService"/>
+			<property name="accountService" ref="accountService"/>
+		</bean>
+		<bean id="categoryAction" class="com.shop.action.CategoryAction" scope="prototype" parent="baseAction"/>
+		-->
+		<!--  配置service层
+		<bean id="baseService" class="com.shop.service.impl.BaseServiceImpl" lazy-init="true">
+			<property name="sessionFactory" ref="sessionFactory"/>
+		</bean>
+		<bean id="categoryService" class="com.shop.service.impl.CategoryServiceImpl" parent="baseService"/>
+		<bean id="accountService" class="com.shop.service.impl.AccountServiceImpl" parent="baseService"/>	
+		-->
+		<!-- 使用注解开发 -->
+		<context:component-scan base-package="com.shop.."/>
+</beans>
